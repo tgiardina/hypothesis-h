@@ -54,7 +54,7 @@ function sendAuthResponse() {
     return;
   }
 
-  window.opener.postMessage(msg, settings.origin);
+  window.opener.postMessage(msg, "*");
   window.close();
 }
 

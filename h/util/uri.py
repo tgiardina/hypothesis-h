@@ -303,6 +303,6 @@ def render_url_template(template, example_url):
     """
     parsed = urlparse(example_url)
 
-    url = template.replace("{current_host}", parsed.hostname)
+    url = template.replace("{current_host}", "localhost")
     url = url.replace("{current_scheme}", parsed.scheme)
     return url
