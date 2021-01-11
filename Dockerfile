@@ -1,71 +1,25 @@
-# Stage 1: Build static frontend assets.
-FROM node:15-alpine as build
-
-ENV NODE_ENV production
-
-# Install dependencies.
-WORKDIR /tmp/frontend-build
-COPY package-lock.json ./
-COPY package.json ./
-RUN npm ci --production
-RUN npm install --global gulp-cli@2.3.0
-
-# Build h js/css.
-COPY gulpfile.js ./
-COPY scripts/gulp ./scripts/gulp
-COPY h/static ./h/static
-RUN npm run build
-
-# Stage 2: Build the rest of the app using the build output from Stage 1.
 FROM python:3.6.9-alpine3.10
-LABEL maintainer="Hypothes.is Project and contributors"
+FROM ubuntu:20.04
+WORKDIR /usr/src/app
 
-# Install system build and runtime dependencies.
-RUN apk add --no-cache \
-    libffi \
-    libpq \
-    nginx \
-    git
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update
+RUN apt-get install -y make \
+  curl \
+  git \
+  python3-pip \
+  libpq-dev \
+  build-essential libssl-dev zlib1g-dev libbz2-dev \
+  libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \
+  xz-utils tk-dev libffi-dev liblzma-dev python-openssl git
+RUN curl https://pyenv.run | bash
+RUN ln -s /root/.pyenv/bin/pyenv /bin/pyenv
+RUN pip3 install tox
+RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
+RUN apt-get install -y nodejs
+RUN curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+RUN chmod +x /usr/local/bin/docker-compose
 
-# Create the hypothesis user, group, home directory and package directory.
-RUN addgroup -S hypothesis && adduser -S -G hypothesis -h /var/lib/hypothesis hypothesis
-WORKDIR /var/lib/hypothesis
-
-# Ensure nginx state and log directories writeable by unprivileged user.
-RUN chown -R hypothesis:hypothesis /var/log/nginx /var/lib/nginx /var/tmp/nginx
-
-# Copy nginx config
-COPY conf/nginx.conf /etc/nginx/nginx.conf
-
-# Copy minimal data to allow installation of dependencies.
-COPY requirements/requirements.txt ./
-
-# Install build deps, build, and then clean up.
-RUN apk add --no-cache --virtual build-deps \
-    build-base \
-    libffi-dev \
-    postgresql-dev \
-  && pip install --no-cache-dir -U pip \
-  && pip install --no-cache-dir -r requirements.txt \
-  && apk del build-deps
-
-# Copy frontend assets.
-COPY --from=build /tmp/frontend-build/build build
-
-# Copy the rest of the application files.
 COPY . .
-
-# If we're building from a git clone, ensure that .git is writeable
-RUN [ -d .git ] && chown -R hypothesis:hypothesis .git || :
-
-# Expose the default port.
-EXPOSE 5000
-
-# Set the application environment
-ENV PATH /var/lib/hypothesis/bin:$PATH
-ENV PYTHONIOENCODING utf_8
-ENV PYTHONPATH /var/lib/hypothesis:$PYTHONPATH
-
-# Start the web server by default
-USER hypothesis
-CMD ["init-env", "supervisord", "-c" , "conf/supervisord.conf"]
+RUN make dev || :
+RUN chmod +x ./scripts/await-elastic.sh
