@@ -26,6 +26,7 @@ def init(ctx):
 
 
 def _init_db(settings):
+    print(settings)
     engine = db.make_engine(settings)
 
     # If the alembic_version table is present, then the database is managed by

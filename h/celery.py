@@ -23,7 +23,7 @@ celery = Celery("h")
 celery.conf.update(
     broker_url=os.environ.get(
         "CELERY_BROKER_URL",
-        os.environ.get("BROKER_URL", "amqp://guest:guest@localhost:5672//"),
+        os.environ.get("BROKER_URL", "amqp://guest:guest@rabbit:5672//"),
     ),
     # What options should we have when sending messages to the queue?
     broker_transport_options=RETRY_POLICY_QUICK,
