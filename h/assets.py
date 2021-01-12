@@ -142,7 +142,7 @@ def includeme(config):
     config.add_view(route_name="assets", view=assets_view)
 
     assets_env = Environment(
-        "/h/assets", "h/assets.ini", "build/manifest.json", auto_reload=auto_reload
+        "/assets", "h/assets.ini", "build/manifest.json", auto_reload=auto_reload
     )
 
     # We store the environment objects on the registry so that the Jinja2
